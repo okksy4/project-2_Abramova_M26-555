@@ -2,8 +2,8 @@
 
 from .engine import run
 
-#def main():
-#print("DB project is running!")
+def main():
+    run()
 
 if __name__ == "__main__":
-    run()
+    main()
