@@ -1,0 +1,12 @@
+{
+    "tables": {
+        "users": {
+            "columns": {
+                "ID": "int",
+                "name": "str",
+                "age": "int",
+                "is_active": "bool"
+            }
+        }
+    }
+}
