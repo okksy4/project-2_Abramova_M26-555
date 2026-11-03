@@ -1,9 +1,9 @@
 [project]
-name = "primitive-db"
+name = "database"
 version = "0.1.0"
-description = "Add your description here"
+description = "Простая система управления базами данных для создания, управления и удаления таблиц с поддержкой основных типов данных"
 readme = "README.md"
-long_description = "Подробное описание проекта"
+
 authors = [
     { name = "okksy4", email = "okksy4@mail.ru" }
 ]
@@ -22,8 +22,11 @@ select = ["E", "F", "I"]
 ignore = []
 
 [project.scripts]
-project = "primitive_db.engine:run"
+database = "primitive_db.engine:run"
 
 [build-system]
 requires = ["uv_build>=0.13.5,<0.14.0"]
 build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "primitive_db"

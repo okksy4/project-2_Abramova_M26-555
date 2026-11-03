@@ -1,5 +1,14 @@
- .venv
- dist/
- __pycache__/
- *.egg-info
- db_meta.json
+# Виртуальные окружения
+.venv/
+.venv_wsl/
+
+# Кеш линтеров и инструментов
+.ruff_cache/
+__pycache__/
+*.pyc
+
+# Файлы работы БД
+db_meta.json
+
+# Записи аскинемы
+*.cast
