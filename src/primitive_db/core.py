@@ -1,7 +1,15 @@
-from .utils import load_table_data
+from .decorators import (
+    create_cacher,
+    log_time, 
+    confirm_action, 
+    handle_db_errors
+)
+from .utils import load_table_data, save_table_data
 
 VALID_TYPES = {'int', 'str', 'bool'}
+select_cache = create_cacher()
 
+@handle_db_errors
 def create_table(metadata, table_name, columns):
     """
     Создает новую таблицу в метаданных базы данных.
@@ -54,8 +62,11 @@ def create_table(metadata, table_name, columns):
     metadata['tables'][table_name] = {
         'columns': {col_name: col_type for col_name, col_type in columns}
     }
+    save_table_data(table_name, [])
     return metadata
 
+@confirm_action("удаление таблицы")
+@handle_db_errors
 def drop_table(metadata, table_name):
     """
     Удаляет таблицу из базы данных.
@@ -75,6 +86,7 @@ def drop_table(metadata, table_name):
 
     del metadata['tables'][table_name]
     return metadata
+    select_cache.clear()
 
 # GRUD
 def check_value_type(col_name, col_type, value):
@@ -92,6 +104,9 @@ def _matches(row, where_clause):
     field, value = next(iter(where_clause.items()))
     return row[field] == value
 
+
+@handle_db_errors
+@log_time
 def insert(metadata, table_name, values):
     """
     Добавляет запись: значения сопоставляются со столбцами без ID,
@@ -118,13 +133,23 @@ def insert(metadata, table_name, values):
 
     rows.append(row)
     return rows, new_id
+    select_cache.clear()
 
-def select(table_data, where_clause=None):
+@handle_db_errors
+@log_time
+def select(table_data, where_clause=None, table_name=None):
     """Возвращает записи, подходящие под условие (или все, если условия нет)."""
     if where_clause is None:
         return table_data
-    return [row for row in table_data if _matches(row, where_clause)]
 
+    key = (table_name, tuple(sorted(where_clause.items())))
+
+    return select_cache(
+        key,
+        lambda: [row for row in table_data if _matches(row, where_clause)],
+    )
+
+@handle_db_errors
 def update(table_data, set_clause, where_clause=None):
     """Обновляет поля set_clause в записях под условием. Возвращает (данные, ID изменённых)."""
     if 'ID' in set_clause:
@@ -135,7 +160,10 @@ def update(table_data, set_clause, where_clause=None):
             row.update(set_clause)
             updated_ids.append(row['ID'])
     return table_data, updated_ids
+    select_cache.clear()
 
+@confirm_action("удаление записей")
+@handle_db_errors
 def delete(table_data, where_clause=None):
     """Удаляет записи под условием; без условия — все. Возвращает (данные, ID удалённых)."""
     kept, deleted_ids = [], []
@@ -145,3 +173,4 @@ def delete(table_data, where_clause=None):
         else:
             kept.append(row)
     return kept, deleted_ids
+    select_cache.clear()

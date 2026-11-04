@@ -91,7 +91,10 @@ def run():
             elif command == 'drop_table':
                 if len(args) != 2:
                     raise ValueError("Неверный формат команды drop_table")
-                metadata = drop_table(metadata, args[1])
+                new_metadata = drop_table(metadata, args[1])
+                if new_metadata is None:
+                    continue
+                metadata = new_metadata
                 save_metadata(METADATA_FILE, metadata)
                 print(f'Таблица "{args[1]}" успешно удалена')
 
@@ -128,7 +131,7 @@ def run():
                     where_clause = parse_condition(' '.join(args[4:]))
                     validate_where(where_clause, columns, table_name)
 
-                rows = select(load_table_data(table_name), where_clause)
+                rows = select(load_table_data(table_name), where_clause, table_name)
                 print_table(list(columns), rows)
 
             elif command == 'update':
@@ -170,6 +173,8 @@ def run():
                     validate_where(where_clause, columns, table_name)
 
                 rows, deleted_ids = delete(load_table_data(table_name), where_clause)
+                if rows is None:
+                    continue
                 save_table_data(table_name, rows)
                 if len(deleted_ids) == 1:
                     print(f'Запись с ID={deleted_ids[0]} успешно удалена из таблицы "{table_name}".')
@@ -189,8 +194,12 @@ def run():
             else:
                 print(f"Функции {command} нет. Попробуйте снова.")
 
-        except ValueError as e:
-            print(f"Ошибка: {e}")
         except (KeyboardInterrupt, EOFError):
             print()
             break
+        except FileNotFoundError:
+            print("Ошибка: файл базы данных не найден")
+        except OSError:
+            print("Ошибка: не удалось сохранить или прочитать файл")
+        except ValueError as e:
+            print(f"Ошибка: {e}")
