@@ -232,7 +232,12 @@ def run():
                     where_clause = parse_condition(" ".join(args[4:]))
                     validate_where(where_clause, columns, table_name)
 
-                rows, deleted_ids = delete(load_table_data(table_name), where_clause)
+                result = delete(load_table_data(table_name), where_clause)
+                if result is None:
+                    continue
+                rows, deleted_ids = result
+                save_table_data(table_name, rows)
+                
                 if rows is None:
                     continue
                 save_table_data(table_name, rows)

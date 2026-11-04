@@ -7,8 +7,8 @@ def parse_value(raw):
         return raw[1:-1]
     if re.fullmatch(r"-?\d+", raw):
         return int(raw)
-    if raw in ("true", "false"):
-        return raw == "true"
+    if raw.lower() in ("true", "false"):
+        return raw.lower() == "true"
     raise ValueError(f"Значение '{raw}' не распознано: строки должны быть в кавычках")
 
 
