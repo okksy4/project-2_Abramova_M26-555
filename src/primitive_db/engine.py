@@ -237,7 +237,7 @@ def run():
                     continue
                 rows, deleted_ids = result
                 save_table_data(table_name, rows)
-                
+
                 if rows is None:
                     continue
                 save_table_data(table_name, rows)
