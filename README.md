@@ -111,10 +111,8 @@ uv run database
 * Правильность синтаксиса
 
 ## Демонстрация запуска и работы c таблицами
-Установка пакета, запуск БД, создание, проверка и удаление таблицы:     
-     
-[![Аскинема-запись](https://asciinema.org/a/bzz7d2x8G2NNHHLF.svg?v=2)](https://asciinema.org/a/bzz7d2x8G2NNHHLF)    
-    
-Демонстрация работы с таблицами:     
+Установка пакета, запуск БД, создание, проверка и удаление таблицы:
+[▶ запись в asciinema](https://asciinema.org/a/bzz7d2x8G2NNHHLF)
 
-[![Аскинема-запись](https://asciinema.org/a/1270962.svg?v=2)](https://asciinema.org/a/1270962)
+Демонстрация работы с таблицами:
+[▶ запись в asciinema](https://asciinema.org/a/1270962)
