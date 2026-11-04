@@ -1,13 +1,9 @@
-from .decorators import (
-    create_cacher,
-    log_time, 
-    confirm_action, 
-    handle_db_errors
-)
+from .decorators import confirm_action, create_cacher, handle_db_errors, log_time
 from .utils import load_table_data, save_table_data
 
-VALID_TYPES = {'int', 'str', 'bool'}
+VALID_TYPES = {"int", "str", "bool"}
 select_cache = create_cacher()
+
 
 @handle_db_errors
 def create_table(metadata, table_name, columns):
@@ -31,18 +27,18 @@ def create_table(metadata, table_name, columns):
     if len(table_name) > 50:
         raise ValueError("Имя таблицы не может превышать 50 символов")
 
-    if table_name in metadata['tables']:
+    if table_name in metadata["tables"]:
         raise ValueError(f'Таблица "{table_name}" уже существует')
 
     # проверяем пользовательский ID и добавляем свой, если его нет
     column_names = [col[0] for col in columns]
-    if 'ID' in column_names:
-        id_index = column_names.index('ID')
-        if columns[id_index][1] != 'int':
+    if "ID" in column_names:
+        id_index = column_names.index("ID")
+        if columns[id_index][1] != "int":
             raise ValueError("Столбец ID должен иметь тип int")
     else:
-        columns = [('ID', 'int')] + list(columns)
-        column_names = ['ID'] + column_names
+        columns = [("ID", "int")] + list(columns)
+        column_names = ["ID"] + column_names
 
     # уникальность и корректность имен столбцов
     if len(column_names) != len(set(column_names)):
@@ -59,11 +55,12 @@ def create_table(metadata, table_name, columns):
                 f"Допустимые типы: {', '.join(sorted(VALID_TYPES))}"
             )
 
-    metadata['tables'][table_name] = {
-        'columns': {col_name: col_type for col_name, col_type in columns}
+    metadata["tables"][table_name] = {
+        "columns": {col_name: col_type for col_name, col_type in columns}
     }
     save_table_data(table_name, [])
     return metadata
+
 
 @confirm_action("удаление таблицы")
 @handle_db_errors
@@ -81,23 +78,25 @@ def drop_table(metadata, table_name):
     Raises:
         ValueError: если таблица не существует
     """
-    if table_name not in metadata['tables']:
+    if table_name not in metadata["tables"]:
         raise ValueError(f'Таблица "{table_name}" не существует')
 
-    del metadata['tables'][table_name]
+    del metadata["tables"][table_name]
     return metadata
     select_cache.clear()
+
 
 # GRUD
 def check_value_type(col_name, col_type, value):
     """Проверяет, что значение соответствует типу столбца."""
-    if col_type == 'bool' and not isinstance(value, bool):
-        raise ValueError(f'Столбец {col_name} имеет тип bool')
-    if col_type == 'int' and (isinstance(value, bool) or not isinstance(value, int)):
-        raise ValueError(f'Столбец {col_name} имеет тип int')
-    if col_type == 'str' and not isinstance(value, str):
-        raise ValueError(f'Столбец {col_name} имеет тип str')
+    if col_type == "bool" and not isinstance(value, bool):
+        raise ValueError(f"Столбец {col_name} имеет тип bool")
+    if col_type == "int" and (isinstance(value, bool) or not isinstance(value, int)):
+        raise ValueError(f"Столбец {col_name} имеет тип int")
+    if col_type == "str" and not isinstance(value, str):
+        raise ValueError(f"Столбец {col_name} имеет тип str")
     return value
+
 
 def _matches(row, where_clause):
     """Проверяет запись по условию-словарю {'поле': значение}."""
@@ -112,11 +111,11 @@ def insert(metadata, table_name, values):
     Добавляет запись: значения сопоставляются со столбцами без ID,
     новый ID = max(ID) + 1. Возвращает (данные таблицы, новый ID).
     """
-    if table_name not in metadata['tables']:
+    if table_name not in metadata["tables"]:
         raise ValueError(f'Таблица "{table_name}" не существует')
 
-    columns = metadata['tables'][table_name]['columns']
-    data_columns = [c for c in columns if c != 'ID']
+    columns = metadata["tables"][table_name]["columns"]
+    data_columns = [c for c in columns if c != "ID"]
 
     if len(values) != len(data_columns):
         raise ValueError(
@@ -125,15 +124,16 @@ def insert(metadata, table_name, values):
         )
 
     rows = load_table_data(table_name)
-    new_id = max((row['ID'] for row in rows), default=0) + 1
+    new_id = max((row["ID"] for row in rows), default=0) + 1
 
-    row = {'ID': new_id}
+    row = {"ID": new_id}
     for col_name, value in zip(data_columns, values):
         row[col_name] = check_value_type(col_name, columns[col_name], value)
 
     rows.append(row)
     return rows, new_id
     select_cache.clear()
+
 
 @handle_db_errors
 @log_time
@@ -149,27 +149,33 @@ def select(table_data, where_clause=None, table_name=None):
         lambda: [row for row in table_data if _matches(row, where_clause)],
     )
 
+
 @handle_db_errors
 def update(table_data, set_clause, where_clause=None):
-    """Обновляет поля set_clause в записях под условием. Возвращает (данные, ID изменённых)."""
-    if 'ID' in set_clause:
+    """Обновляет поля set_clause в записях под условием.
+    Возвращает (данные, ID изменённых).
+    """
+    if "ID" in set_clause:
         raise ValueError("ID изменять нельзя")
     updated_ids = []
     for row in table_data:
         if where_clause is None or _matches(row, where_clause):
             row.update(set_clause)
-            updated_ids.append(row['ID'])
+            updated_ids.append(row["ID"])
     return table_data, updated_ids
     select_cache.clear()
+
 
 @confirm_action("удаление записей")
 @handle_db_errors
 def delete(table_data, where_clause=None):
-    """Удаляет записи под условием; без условия — все. Возвращает (данные, ID удалённых)."""
+    """Удаляет записи под условием; без условия — все.
+    Возвращает (данные, ID удалённых).
+    """
     kept, deleted_ids = [], []
     for row in table_data:
         if where_clause is None or _matches(row, where_clause):
-            deleted_ids.append(row['ID'])
+            deleted_ids.append(row["ID"])
         else:
             kept.append(row)
     return kept, deleted_ids

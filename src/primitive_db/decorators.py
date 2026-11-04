@@ -1,6 +1,8 @@
 """Декораторы для обработки ошибок базы данных."""
 
+import time
 from functools import wraps
+
 
 def handle_db_errors(func):
     """Перехватывает типовые ошибки операций с БД и печатает понятное сообщение
@@ -19,6 +21,7 @@ def handle_db_errors(func):
 
     return wrapper
 
+
 def confirm_action(action_name):
     """Запрашивает у пользователя подтверждение перед выполнением операции.
 
@@ -28,10 +31,12 @@ def confirm_action(action_name):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            answer = input(
-                f'Вы уверены, что хотите выполнить "{action_name}"? [y/n]: '
-            ).strip().lower()
-            if answer != 'y':
+            answer = (
+                input(f'Вы уверены, что хотите выполнить "{action_name}"? [y/n]: ')
+                .strip()
+                .lower()
+            )
+            if answer != "y":
                 print("Операция отменена")
                 return None
             return func(*args, **kwargs)
@@ -39,8 +44,6 @@ def confirm_action(action_name):
         return wrapper
 
     return decorator
-import time
-from functools import wraps
 
 
 def log_time(func):
@@ -55,6 +58,7 @@ def log_time(func):
         return result
 
     return wrapper
+
 
 def create_cacher():
     """Возвращает функцию cache_result(key, value_func) с кэшем в замыкании."""
