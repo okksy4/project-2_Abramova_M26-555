@@ -87,7 +87,7 @@ def run():
             if not line:
                 continue
 
-            # posix=False сохраняет кавычки значений ("Sergei" остаётся с кавычками)
+            # posix=False сохраняет кавычки значений ("Sergei" остается с кавычками)
             args = shlex.split(line, posix=False)
             command = args[0]
 

@@ -153,7 +153,7 @@ def select(table_data, where_clause=None, table_name=None):
 @handle_db_errors
 def update(table_data, set_clause, where_clause=None):
     """Обновляет поля set_clause в записях под условием.
-    Возвращает (данные, ID изменённых).
+    Возвращает (данные, ID измененных).
     """
     if "ID" in set_clause:
         raise ValueError("ID изменять нельзя")
@@ -170,7 +170,7 @@ def update(table_data, set_clause, where_clause=None):
 @handle_db_errors
 def delete(table_data, where_clause=None):
     """Удаляет записи под условием; без условия — все.
-    Возвращает (данные, ID удалённых).
+    Возвращает (данные, ID удаленных).
     """
     kept, deleted_ids = [], []
     for row in table_data:
