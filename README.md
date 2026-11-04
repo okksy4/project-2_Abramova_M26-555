@@ -113,7 +113,8 @@ uv run database
 ## Демонстрация запуска и работы c таблицами
 Установка пакета, запуск БД, создание, проверка и удаление таблицы:     
      
-[![Аскинема-запись](https://asciinema.org/a/bzz7d2x8G2NNHHLF.svg)](https://asciinema.org/a/bzz7d2x8G2NNHHLF)->    
+[![Аскинема-запись](https://asciinema.org/a/bzz7d2x8G2NNHHLF.svg?v=2)](https://asciinema.org/a/bzz7d2x8G2NNHHLF)    
     
 Демонстрация работы с таблицами:     
-[![Аскинема-запись](https://asciinema.org/a/1270962.svg)](https://asciinema.org/a/1270962)
+
+[![Аскинема-запись](https://asciinema.org/a/1270962.svg?v=2)](https://asciinema.org/a/1270962)
