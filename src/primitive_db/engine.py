@@ -1,86 +1,100 @@
 import shlex
-from .core import create_table, drop_table
-from .utils import load_metadata, save_metadata
+
+from prettytable import PrettyTable
+
+from .core import (create_table, drop_table, insert, select, update, delete,
+                   check_value_type)
+from .parser import parse_values, parse_condition, parse_set
+from .utils import (load_metadata, save_metadata,
+                    load_table_data, save_table_data)
+
+METADATA_FILE = 'db_meta.json'
 
 def print_help():
-    """
-    Выводит справочную информацию по доступным командам.
-    
-    Содержит список всех доступных команд и их краткое описание.
-    """
-    print("\n***Процесс работы с таблицей***")
+    """Выводит справочную информацию по доступным командам."""
+    print("\n***Операции с данными***")
     print("Функции:")
     print("<command> create_table <имя_таблицы> <столбец1:тип> .. - создать таблицу")
     print("<command> list_tables - показать список всех таблиц")
     print("<command> drop_table <имя_таблицы> - удалить таблицу")
-    
+    print('<command> insert into <имя_таблицы> values (<значение1>, ...) - создать запись')
+    print('<command> select from <имя_таблицы> [where <столбец> = <значение>] - прочитать записи')
+    print('<command> update <имя_таблицы> set <столбец> = <значение> where <столбец> = <значение> - обновить запись')
+    print('<command> delete from <имя_таблицы> where <столбец> = <значение> - удалить запись')
+    print('<command> info <имя_таблицы> - вывести информацию о таблице')
     print("\nОбщие команды:")
     print("<command> exit - выход из программы")
-    print("<command> help - справочная информация\n") 
+    print("<command> help - справочная информация\n")
 
-METADATA_FILE = 'db_meta.json'
+def print_table(column_names, rows):
+    """Печатает записи в виде PrettyTable."""
+    if not rows:
+        print("Нет записей")
+        return
+    table = PrettyTable()
+    table.field_names = column_names
+    for row in rows:
+        table.add_row([row[c] for c in column_names])
+    print(table)
+
+def check_table(metadata, table_name):
+    """Проверяет существование таблицы."""
+    if table_name not in metadata['tables']:
+        raise ValueError(f'Таблица "{table_name}" не существует')
+
+def check_columns(columns, names, table_name):
+    """Проверяет, что столбцы существуют в таблице."""
+    for name in names:
+        if name not in columns:
+            raise ValueError(f'Столбец "{name}" не существует в таблице "{table_name}"')
+
+def validate_where(where_clause, columns, table_name):
+    """Проверяет столбец и тип значения условия where."""
+    field, value = next(iter(where_clause.items()))
+    check_columns(columns, [field], table_name)
+    check_value_type(field, columns[field], value)
 
 def run():
-    """
-    Основная функция запуска приложения.
-    
-    Отвечает за:
-    - загрузку метаданных
-    - обработку пользовательского ввода
-    - выполнение команд
-    - сохранение изменений
-    """
+    """Загружает метаданные и обрабатывает команды пользователя."""
     metadata = load_metadata(METADATA_FILE)
-    
+
     while True:
         try:
-            command = input(">>>Введите команду: ")
-            args = shlex.split(command)
-            
-            if not args:
+            line = input(">>>Введите команду: ").strip()
+            if not line:
                 continue
-                
+
+            # posix=False сохраняет кавычки значений ("Sergei" остаётся с кавычками)
+            args = shlex.split(line, posix=False)
             command = args[0]
-            
-            valid_commands = ['create_table', 'drop_table', 'list_tables', 'help', 'exit']
-            if command not in valid_commands:
-                print(f"Функции {command} нет. Попробуйте снова.")
-                continue
-                
-            if command == 'create_table':
+
+            if command == 'exit':
+                print("До свидания!")
+                break
+
+            elif command == 'help':
+                print_help()
+
+            elif command == 'create_table':
                 if len(args) < 3:
-                    print("Недостаточно аргументов для команды create_table")
-                    continue
-                    
+                    raise ValueError("Недостаточно аргументов для команды create_table")
                 table_name = args[1]
                 columns = [tuple(arg.split(':')) for arg in args[2:]]
-                
-                try:
-                    metadata = create_table(metadata, table_name, columns)
-                    save_metadata(METADATA_FILE, metadata)
-    
-                    columns_str = ', '.join([f"{name}:{type}" for name, type in columns])
-                    print(f"Таблица \"{table_name}\" успешно создана со столбцами: {columns_str}")
-                
-                except ValueError as e:
-                    if "Недопустимый тип данных" in str(e):
-                        print(f"Некорректное значение: {e}")
-                    else:
-                        print(f"Ошибка: {e}")
-                   
+                metadata = create_table(metadata, table_name, columns)
+                save_metadata(METADATA_FILE, metadata)
+                cols_str = ', '.join(
+                    f'{name}:{col_type}'
+                    for name, col_type in metadata['tables'][table_name]['columns'].items()
+                )
+                print(f'Таблица "{table_name}" успешно создана со столбцами: {cols_str}')
+
             elif command == 'drop_table':
                 if len(args) != 2:
-                    print("Неверный формат команды drop_table")
-                    continue
-                    
-                table_name = args[1]
-                try:
-                    metadata = drop_table(metadata, table_name)
-                    save_metadata(METADATA_FILE, metadata)
-                    print(f"Таблица \"{table_name}\" успешно удалена")
-                except ValueError as e:
-                    print(f"Ошибка: {e}")
-                    
+                    raise ValueError("Неверный формат команды drop_table")
+                metadata = drop_table(metadata, args[1])
+                save_metadata(METADATA_FILE, metadata)
+                print(f'Таблица "{args[1]}" успешно удалена')
+
             elif command == 'list_tables':
                 tables = metadata.get('tables', {}).keys()
                 if not tables:
@@ -88,14 +102,95 @@ def run():
                 else:
                     print("Список таблиц:")
                     for table in tables:
-                        print(f"- \"{table}\"")
+                        print(f'- "{table}"')
 
-            elif command == 'help':
-                print_help()
-                
-            elif command == 'exit':
-                print("До свидания!")
-                break
-                
-        except Exception as e:
-            print(f"Произошла непредвиденная ошибка: {e}")
+            elif command == 'insert':
+                if len(args) < 4 or args[1] != 'into' or 'values' not in args[3:]:
+                    raise ValueError('Неверный формат: insert into <таблица> values (<значения>)')
+                table_name = args[2]
+                idx = args.index('values', 3)
+                values = parse_values(' '.join(args[idx + 1:]))
+                rows, new_id = insert(metadata, table_name, values)
+                save_table_data(table_name, rows)
+                print(f'Запись с ID={new_id} успешно добавлена в таблицу "{table_name}".')
+
+            elif command == 'select':
+                if len(args) < 3 or args[1] != 'from':
+                    raise ValueError('Неверный формат: select from <таблица> [where <столбец> = <значение>]')
+                table_name = args[2]
+                check_table(metadata, table_name)
+                columns = metadata['tables'][table_name]['columns']
+
+                where_clause = None
+                if len(args) > 3:
+                    if args[3] != 'where':
+                        raise ValueError('Неверный формат: select from <таблица> [where <столбец> = <значение>]')
+                    where_clause = parse_condition(' '.join(args[4:]))
+                    validate_where(where_clause, columns, table_name)
+
+                rows = select(load_table_data(table_name), where_clause)
+                print_table(list(columns), rows)
+
+            elif command == 'update':
+                if len(args) < 4 or args[2] != 'set' or 'where' not in args:
+                    raise ValueError('Неверный формат: update <таблица> set <столбец> = <значение> where <столбец> = <значение>')
+                table_name = args[1]
+                check_table(metadata, table_name)
+                columns = metadata['tables'][table_name]['columns']
+
+                idx_set = args.index('set')
+                idx_where = args.index('where')
+                set_clause = parse_set(' '.join(args[idx_set + 1:idx_where]))
+                for name, value in set_clause.items():
+                    check_columns(columns, [name], table_name)
+                    check_value_type(name, columns[name], value)
+
+                where_clause = parse_condition(' '.join(args[idx_where + 1:]))
+                validate_where(where_clause, columns, table_name)
+
+                rows, updated_ids = update(load_table_data(table_name), set_clause, where_clause)
+                save_table_data(table_name, rows)
+                if len(updated_ids) == 1:
+                    print(f'Запись с ID={updated_ids[0]} в таблице "{table_name}" успешно обновлена.')
+                else:
+                    print(f'Обновлено записей: {len(updated_ids)} (ID: {", ".join(map(str, updated_ids))}).')
+
+            elif command == 'delete':
+                if len(args) < 3 or args[1] != 'from':
+                    raise ValueError('Неверный формат: delete from <таблица> where <столбец> = <значение>')
+                table_name = args[2]
+                check_table(metadata, table_name)
+                columns = metadata['tables'][table_name]['columns']
+
+                where_clause = None
+                if len(args) > 3:
+                    if args[3] != 'where':
+                        raise ValueError('Неверный формат: delete from <таблица> where <столбец> = <значение>')
+                    where_clause = parse_condition(' '.join(args[4:]))
+                    validate_where(where_clause, columns, table_name)
+
+                rows, deleted_ids = delete(load_table_data(table_name), where_clause)
+                save_table_data(table_name, rows)
+                if len(deleted_ids) == 1:
+                    print(f'Запись с ID={deleted_ids[0]} успешно удалена из таблицы "{table_name}".')
+                else:
+                    print(f'Удалено записей: {len(deleted_ids)} (ID: {", ".join(map(str, deleted_ids))}).')
+
+            elif command == 'info':
+                if len(args) != 2:
+                    raise ValueError('Неверный формат: info <таблица>')
+                table_name = args[1]
+                check_table(metadata, table_name)
+                columns = metadata['tables'][table_name]['columns']
+                print(f'Таблица: {table_name}')
+                print('Столбцы: ' + ', '.join(f'{n}:{t}' for n, t in columns.items()))
+                print(f'Количество записей: {len(load_table_data(table_name))}')
+
+            else:
+                print(f"Функции {command} нет. Попробуйте снова.")
+
+        except ValueError as e:
+            print(f"Ошибка: {e}")
+        except (KeyboardInterrupt, EOFError):
+            print()
+            break
